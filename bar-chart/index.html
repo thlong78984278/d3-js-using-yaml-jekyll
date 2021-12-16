@@ -59,7 +59,7 @@ var svg = d3.select("#chart").append("svg")
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-d3.json("/data/bar-chart.json", function(error, data) {
+d3.json("/midterm-dwbi/data/bar-chart.json", function(error, data) {
   if (error) throw error;
 
   x.domain(data.map(function(d) { return d.letter; }));
