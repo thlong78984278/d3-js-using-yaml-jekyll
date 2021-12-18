@@ -1,0 +1,151 @@
+---
+layout: default
+title: backbone test zone
+---
+
+<div id="chart" style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);"></div>
+<style>
+  /* Bar Chart */
+  .bar {
+    fill: steelblue;
+  }
+
+  .bar:hover {
+    fill: yellow;
+  }
+
+  .axis {
+    font: 10px sans-serif;
+  }
+
+  .axis path,
+  .axis line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+  }
+
+  .x.axis path {
+    display: none;
+  }
+</style>
+
+<script>
+  $(document).ready(function () {
+    // create a model class
+
+    var Food = Backbone.Collection.extend({
+      data: [],
+      url: 'https://alpha-vantage.p.rapidapi.com/query?function=DIGITAL_CURRENCY_MONTHLY&market=CNY&symbol=BTC',
+      parse: function (response) {
+        var self = this;
+        var time_series = response['Time Series (Digital Currency Monthly)'];
+        var keys = Object.keys(time_series);
+        for (const key of keys) {
+          time_series[key.slice(0, 7)] = time_series[key]["1b. open (USD)"];
+          delete time_series[key];
+        }
+
+        keys = Object.keys(time_series);
+        for (let i = 0; i < keys.length; i++) {
+          self.data[i] = {
+            'month': keys[i],
+            'market': time_series[keys[i]]
+          }
+        }
+      }
+    });
+
+
+    // create an instance of that model class
+    var model = new Food();
+
+
+    // make the async API request
+    model.fetch({
+      async: false,
+      headers: {
+        'x-rapidapi-host': 'alpha-vantage.p.rapidapi.com',
+        'x-rapidapi-key': '1b098be50emshc3601fce460e1c6p1bc1a2jsnc9ea19f8f976'
+      }
+    });
+
+    ////////////////////////////////////////////////////////////////////////////////////
+
+    var margin = {
+      top: 20,
+      right: 20,
+      bottom: 30,
+      left: 40
+    }
+    var width = 750 - margin.left - margin.right;
+    var height = 500 - margin.top - margin.bottom;
+
+    var x = d3.scale.ordinal()
+      .rangeRoundBands([0, width], .1);
+
+    var y = d3.scale.linear()
+      .range([height, 0]);
+
+    var xAxis = d3.svg.axis()
+      .scale(x)
+      .orient("bottom");
+
+    var yAxis = d3.svg.axis()
+      .scale(y)
+      .orient("left")
+      .ticks(10);
+
+    var svg = d3.select("#chart").append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+    var data = model.data.slice(0, 12).reverse();
+
+    x.domain(data.map(function (d) {
+      return d['month'];
+    }));
+    y.domain([0, d3.max(data, function (d) {
+      return d['market'];
+    })]);
+
+
+    svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis);
+
+    svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+      .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 6)
+      .attr("dy", ".71em")
+      .style("text-anchor", "end")
+      .text("Open (USD)");
+
+    svg.selectAll(".bar")
+      .data(data)
+      .enter().append("rect")
+      .attr("class", "bar")
+      .attr("x", function (d) {
+        return x(d['month']);
+      })
+      .attr("width", x.rangeBand())
+      .attr("y", function (d) {
+        return y(d['market']);
+      })
+      .attr("height", function (d) {
+        return height - y(d['market']);
+      });
+
+
+    function type(d) {
+      d['market'] = +d['market'];
+      return d;
+    }
+  })
+</script>
